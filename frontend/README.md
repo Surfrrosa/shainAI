@@ -1,0 +1,2 @@
+# frontend
+Next.js app.
