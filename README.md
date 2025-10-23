@@ -1,167 +1,240 @@
-# shainAI
+# ShainAI
 
-Secret agent man trained with all my bullshit to help keep me on track.
+**Your privacy-first, RAG-powered second brain that remembers everything.**
 
-A retrieval-augmented personal project brain that remembers everything across repos, docs, and chats — and answers with sources.
+A retrieval-augmented generation (RAG) system that ingests, indexes, and semantically searches across all your personal data sources. Ask questions and get AI-powered answers with citations from your own knowledge base—ChatGPT conversations, code repos, notes, local files, and more.
 
-> Stack: Next.js (frontend) • Node/Express (API) • Postgres + pgvector (Neon) • S3/Supabase storage • OpenAI/Anthropic for LLM + embeddings
+> **Stack:** Next.js 14 • Node/Express • PostgreSQL + pgvector • OpenAI GPT-4 Turbo • React • TypeScript
+
+## Why Local-First?
+
+ShainAI runs entirely on your machine because:
+- **Privacy:** Your data never leaves your computer
+- **Speed:** No network latency for retrieval
+- **Cost:** No API charges for storage/search
+- **Control:** You own your data completely
 
 ## Features
 
-- Semantic search across GitHub repos, files, and chat exports
-- Structured facts storage (deadlines, goals, decisions)
-- Automatic decision journal
-- Chat interface with citations
-- Privacy-first (runs on your own infrastructure)
-- Production-grade RAG architecture
+**Core Capabilities:**
+- Semantic search across all personal data with vector embeddings (1536-dim)
+- GPT-4 powered answers with source citations
+- Markdown rendering with code highlighting
+- Collapsible references for clean UX
 
-## Quick start (local)
+**Auto-Ingestion Pipeline:**
+- Real-time file monitoring (Desktop, Downloads, Documents)
+- Git post-commit hooks—auto-ingest on every commit
+- Multi-format parsers: PDF, Word, Pages, images (OCR), .env files, ZIP archives
+- ChatGPT conversation exports, Joplin notes (.jex), Mac Notes
 
-1. Clone and setup:
+**Meta-Memory:**
+- ShainAI saves its own conversations every 5 Q&A exchanges
+- Ask ShainAI about past conversations: "What did I ask you about yesterday?"
+- Creates a recursive knowledge loop
+
+**Data Persistence:**
+- LocalStorage for session continuity
+- Database ingestion with semantic deduplication
+- Copy/export conversations anytime
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL 14+ with pgvector extension
+- OpenAI API key
+
+### 1. Clone and Setup
+
 ```bash
-git clone https://github.com/Surfrrosa/shainAI.git ~/projects/shainai
-cd ~/projects/shainai
-cp .env.example .env
-# Fill in DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY
+git clone https://github.com/Surfrrosa/shainAI.git
+cd shainAI
+cp .env.example backend/.env
 ```
 
-2. Set up database:
+Edit `backend/.env` and add:
+```
+DATABASE_URL=postgresql://user:password@localhost:5432/shainai
+OPENAI_API_KEY=sk-proj-your-key-here
+PORT=3001
+```
+
+### 2. Database Setup
+
 ```bash
-# Create Neon/Postgres database with pgvector enabled
-# Copy DATABASE_URL to .env
+# Install PostgreSQL and create database
+createdb shainai
+
+# Enable pgvector extension
+psql shainai -c "CREATE EXTENSION vector;"
 
 # Run migrations
-DATABASE_URL=<your-url> ./scripts/migrate.sh
+cd backend
+npm install
+./db/migrate.sh
 ```
 
-3. Ingest your content:
+### 3. Start Backend
+
+```bash
+cd backend
+npm run dev  # Runs on port 3001
+```
+
+### 4. Start Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev  # Runs on port 3002
+```
+
+### 5. Ingest Your Data
+
 ```bash
 cd ingest
 npm install
 
-# Ingest GitHub repos
-node src/github.js Surfrrosa pomodoroflow pomodoroflow
-node src/github.js Surfrrosa shainAI shainai
+# Example: Ingest ChatGPT export
+node src/chatgpt.js ~/Downloads/conversations.json
 
-# Ingest files
-node src/files.js ~/Documents/notes.pdf pomodoroflow
+# Example: Ingest Joplin notes
+node src/joplin.js ~/Downloads/export.jex
 
-# See ingest/README.md for more options
+# Example: Ingest local files
+node src/local.js ~/Desktop ~/Documents
+
+# Example: Ingest GitHub repo
+node src/github.js <owner> <repo> <project>
 ```
 
-4. Start backend:
+### 6. Optional: Set Up Auto-Ingestion
+
+**File Watcher (real-time):**
 ```bash
-cd backend
-npm install
-npm run dev  # runs on port 3001
+cd ingest
+node src/watcher.js ~/Desktop ~/Downloads ~/Documents
 ```
 
-5. Start frontend:
+**Git Hooks (per repository):**
 ```bash
-cd frontend
-npm install
-npm run dev  # runs on port 3000
+cd your-repo
+/path/to/shainai/scripts/install-git-hook.sh
 ```
 
-6. Open http://localhost:3000 and start chatting
+### 7. Start Chatting
+
+Open `http://localhost:3002` and ask your second brain anything!
 
 ## Project Structure
 
 ```
 shainai/
-├── backend/           # Express API + tools
+├── backend/                  # Express API server
 │   ├── src/
-│   │   ├── server.js       # Main API server
-│   │   ├── tools/          # RAG tools (search, facts, write)
-│   │   └── lib/            # DB, embeddings, orchestrator
+│   │   ├── server.js        # Main API (search, ask, ingest)
+│   │   ├── tools/           # RAG tools (search_memory, get_facts, write_memory)
+│   │   └── lib/
+│   │       ├── db.js        # PostgreSQL + pgvector connection
+│   │       ├── embeddings.js # OpenAI text-embedding-3-small
+│   │       ├── orchestrator.js # GPT-4 answer generation
+│   │       └── prompts.js   # System prompts
 │   └── db/
-│       └── migrations/     # SQL schema
-├── frontend/          # Next.js chat UI
+│       └── migrations/      # SQL schema definitions
+├── frontend/                # Next.js 14 chat interface
 │   └── src/
-│       ├── app/            # Pages
-│       └── components/     # Chat, ProjectFilter
-├── ingest/            # Data ingestion scripts
+│       ├── app/             # Next.js app router
+│       └── components/
+│           └── Chat.tsx     # Main chat component
+├── ingest/                  # Data ingestion pipeline
 │   └── src/
-│       ├── github.js       # Ingest GitHub repos
-│       ├── files.js        # Ingest PDF/MD/TXT
-│       └── chats.js        # Ingest chat exports
+│       ├── chatgpt.js       # ChatGPT conversation exports
+│       ├── joplin.js        # Joplin note archives (.jex)
+│       ├── mac-notes.js     # Mac Notes database
+│       ├── github.js        # GitHub repository cloning
+│       ├── local.js         # Local file scanning
+│       ├── watcher.js       # Real-time file monitoring
+│       ├── parsers.js       # Multi-format parsers (PDF, Word, OCR, etc.)
+│       └── utils.js         # Chunking, deduplication, batch insert
 ├── scripts/
-│   ├── migrate.sh          # Run DB migrations
-│   └── eval.js             # Eval harness
-└── docs/              # Documentation
+│   ├── git-post-commit-hook.sh  # Auto-ingest on commit
+│   └── install-git-hook.sh      # Hook installer
+└── README.md
 ```
+
+## Supported Ingestion Sources
+
+| Source | Format | Parser | Auto-Ingest |
+|--------|--------|--------|-------------|
+| ChatGPT Exports | `.json` | Custom | Manual |
+| Joplin Notes | `.jex` (tar) | tar-stream | Manual |
+| Mac Notes | SQLite DB | better-sqlite3 | Manual |
+| GitHub Repos | Git clone | simpleGit | Git hooks |
+| Local Files | `.md`, `.txt`, `.js`, `.ts`, etc. | fs | File watcher |
+| PDF Documents | `.pdf` | pdf-parse (disabled) | File watcher |
+| Word Documents | `.docx`, `.doc` | mammoth | File watcher |
+| Pages Documents | `.pages` | AdmZip + XML | File watcher |
+| Images | `.png`, `.jpg`, `.gif` | Tesseract (OCR) | File watcher |
+| Environment Files | `.env` | Custom parser (masked) | File watcher |
+| ZIP Archives | `.zip` | AdmZip | File watcher |
 
 ## Architecture
 
 ### Database Schema
 
-- `memory_chunks`: Embedded text chunks with pgvector for semantic search
-- `facts`: Structured key-value facts (deadlines, goals, decisions)
-- `journal`: Daily logs and decision entries
+- **memory_chunks**: Text chunks with 1536-dim embeddings (pgvector)
+  - Columns: `id`, `project`, `source`, `uri`, `title`, `content`, `tokens`, `embedding`, `created_at`
+  - Index: IVFFlat on embedding (cosine distance)
+- **facts**: Structured key-value facts
+  - Columns: `id`, `project`, `kind`, `key`, `value`, `updated_at`
+- **journal**: Daily logs and decision entries (optional, not currently used)
 
 ### API Endpoints
 
-- `POST /tools/search_memory`: Semantic search
-- `POST /tools/get_facts`: Retrieve facts
+- `POST /tools/search_memory`: Semantic search with vector similarity
+- `POST /tools/get_facts`: Retrieve structured facts
 - `POST /tools/write_memory`: Write journal/facts/chunks
-- `POST /api/ask`: Main chat endpoint (orchestrates retrieval + LLM)
+- `POST /api/ask`: Main chat endpoint (orchestrates retrieval + GPT-4)
+- `POST /api/ingest-conversation`: Save ShainAI conversations to memory
 
 ### RAG Flow
 
-1. User asks question
-2. Generate embedding for query
-3. Semantic search (pgvector cosine similarity)
-4. Retrieve structured facts
-5. Generate answer with Claude + citations
-6. Suggest memory writes (journal/facts)
+1. User asks question in chat
+2. Generate embedding for query (OpenAI text-embedding-3-small)
+3. Semantic search using pgvector cosine similarity (top 5 results)
+4. Retrieve relevant structured facts
+5. Build context from retrieved chunks + facts
+6. Generate answer with GPT-4 Turbo + prompt engineering
+7. Return answer with citations and suggested memory writes
 
-## Testing
+## Development Roadmap
 
-Run eval harness to test retrieval quality:
+**Completed:**
+- [x] Core RAG pipeline with pgvector semantic search
+- [x] GPT-4 orchestration with citations
+- [x] Chat interface with markdown rendering
+- [x] Multi-source ingestion (ChatGPT, Joplin, GitHub, local files)
+- [x] Auto-ingestion via file watchers and git hooks
+- [x] Multi-format parsers (PDF, Word, Pages, images, .env, ZIP)
+- [x] Meta-memory: ShainAI saves its own conversations
+- [x] Copy/export conversation functionality
+- [x] Collapsible citations for clean UX
+- [x] LocalStorage persistence
 
-```bash
-node scripts/eval.js
-```
+**In Progress:**
+- [ ] Mac Notes ingestion (requires Full Disk Access)
+- [ ] PDF parser fix (library bug workaround)
 
-This runs test queries and evaluates:
-- Answer quality
-- Citation count and validity
-- Response latency
-
-## Deployment
-
-### Backend (Railway/Render)
-1. Deploy Express app from `backend/`
-2. Set environment variables
-3. Run migrations on production DB
-
-### Frontend (Vercel)
-1. Deploy Next.js app from `frontend/`
-2. Set `NEXT_PUBLIC_API_URL` to backend URL
-
-### Database (Neon)
-1. Create Postgres database with pgvector
-2. Run migrations via Neon SQL Editor or psql
-
-## Costs
-
-Estimated monthly costs (light usage):
-- Neon Postgres: $19/mo (Pro plan with pgvector)
-- OpenAI embeddings: ~$0.02 per 1M tokens
-- Claude API: ~$3-15 per 1M tokens (Sonnet)
-- Vercel/Railway: Free tier available
-
-## Roadmap
-
-- [x] Core RAG pipeline
-- [x] GitHub/file/chat ingestion
-- [x] Eval harness
-- [ ] Frontend integration with /api/ask
-- [ ] "Save to memory" toggle in chat
-- [ ] Daily cron for automatic journal
-- [ ] Notion/Drive integrations
-- [ ] Multi-user auth
-- [ ] Sharing/collaboration
+**Future Enhancements:**
+- [ ] Conversation history browser/search
+- [ ] Manual fact editing UI
+- [ ] Custom ingestion schedules
+- [ ] Export to markdown/PDF
+- [ ] Multi-project switching UI
+- [ ] Notion/Google Drive integrations
+- [ ] Voice input/output
 
 ## License
 
@@ -171,4 +244,4 @@ Copyright © 2025 Shaina Pauley
 
 ---
 
-Made with ❤️ and Claude Code
+Built with Claude Code

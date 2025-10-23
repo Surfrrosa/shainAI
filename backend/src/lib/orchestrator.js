@@ -1,11 +1,17 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { searchMemory } from '../tools/search_memory.js';
 import { getFacts } from '../tools/get_facts.js';
 import { SYSTEM_PROMPT, CITATION_PROMPT } from './prompts.js';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+if (!process.env.OPENAI_API_KEY) {
+  console.error('ERROR: OPENAI_API_KEY not found in environment');
+}
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
+
+console.log('OpenAI client initialized:', !!openai);
 
 /**
  * Orchestrate a full RAG query
@@ -14,7 +20,7 @@ const anthropic = new Anthropic({
  * @param {string} [params.project] - Optional project filter
  * @returns {Promise<Object>} Answer with citations and suggestions
  */
-export async function ask({ message, project }) {
+export async function ask({ message, project, model = 'gpt-4' }) {
   try {
     // Step 1: Retrieve relevant memories
     console.log('🔍 Searching memory...');
@@ -51,25 +57,49 @@ export async function ask({ message, project }) {
 
     const context = contextParts.join('\n');
 
-    // Step 4: Generate answer with Claude
-    console.log('🤖 Generating answer...');
+    // Step 4: Generate answer with chosen model
+    console.log(`🤖 Generating answer with ${model}...`);
     const prompt = CITATION_PROMPT
       .replace('{context}', context)
       .replace('{question}', message);
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    });
+    let answerText;
 
-    const answerText = response.content[0].text;
+    if (model === 'claude') {
+      // Use Claude (will fix later if needed)
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
+      answerText = response.choices[0].message.content;
+    } else {
+      // Use GPT-4
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
+      answerText = response.choices[0].message.content;
+    }
 
     // Step 5: Parse citations and suggestions
     const citations = memories.map(mem => ({
@@ -114,7 +144,7 @@ export async function ask({ message, project }) {
       metadata: {
         memories_retrieved: memories.length,
         facts_retrieved: facts.length,
-        model: 'claude-sonnet-4-5-20250929',
+        model: model === 'claude' ? 'claude (via gpt-4)' : 'gpt-4-turbo-preview',
       },
     };
 

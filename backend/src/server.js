@@ -67,16 +67,75 @@ app.post('/tools/write_memory', async (req, res) => {
 // Orchestration endpoint (for chat)
 app.post('/api/ask', async (req, res) => {
   try {
-    const { message, project } = req.body;
+    const { message, project, model } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'message is required' });
     }
 
-    const result = await ask({ message, project });
+    const result = await ask({ message, project, model });
     res.json(result);
   } catch (error) {
     console.error('ask error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Ingest conversation into memory
+app.post('/api/ingest-conversation', async (req, res) => {
+  try {
+    const { messages, project = 'personal' } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+
+    // Create a conversation summary
+    const timestamp = new Date().toISOString();
+    const conversationId = `conv_${Date.now()}`;
+
+    // Build conversation text
+    let conversationText = '';
+    messages.forEach((msg, idx) => {
+      const speaker = msg.role === 'user' ? 'User' : 'ShainAI';
+      conversationText += `${speaker}: ${msg.content}\n\n`;
+
+      // Add citations if present
+      if (msg.citations && msg.citations.length > 0) {
+        conversationText += `Sources referenced:\n`;
+        msg.citations.forEach(c => {
+          conversationText += `- ${c.title} (${c.uri})\n`;
+        });
+        conversationText += '\n';
+      }
+    });
+
+    // Extract first user message as title
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    const title = firstUserMsg
+      ? firstUserMsg.content.substring(0, 80) + (firstUserMsg.content.length > 80 ? '...' : '')
+      : 'ShainAI Conversation';
+
+    // Create URI
+    const uri = `shainai://conversation/${conversationId}`;
+
+    // Write to memory
+    const result = await writeMemory({
+      project,
+      type: 'chunk',
+      payload: {
+        source: 'shainai',
+        uri,
+        title: `ShainAI Chat: ${title}`,
+        content: `# ShainAI Conversation\nDate: ${timestamp}\n\n${conversationText}`,
+        tokens: Math.ceil(conversationText.length / 4), // Rough token estimate
+      }
+    });
+
+    console.log(`💾 Saved conversation to memory: ${uri}`);
+    res.json({ success: true, uri, ...result });
+  } catch (error) {
+    console.error('ingest-conversation error:', error);
     res.status(500).json({ error: error.message });
   }
 });

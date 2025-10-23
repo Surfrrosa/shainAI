@@ -28,8 +28,21 @@ pnpm-debug.log*
 .vscode/
 .idea/
 *.swp
-# Data
+# Data & Personal Content
 data/*
 !data/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# Ingestion logs and personal data
+/tmp/*.log
+*.jex
+*.zip
+Downloads/
+Desktop/
+Documents/
+exports/
+
 # Notebooks
 *.ipynb_checkpoints
