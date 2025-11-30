@@ -1,10 +1,14 @@
 # ShainAI
 
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991?style=for-the-badge&logo=openai)](https://openai.com/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
 **Your privacy-first, RAG-powered second brain that remembers everything.**
 
 A retrieval-augmented generation (RAG) system that ingests, indexes, and semantically searches across all your personal data sources. Ask questions and get AI-powered answers with citations from your own knowledge base—ChatGPT conversations, code repos, notes, local files, and more.
-
-> **Stack:** Next.js 14 • Node/Express • PostgreSQL + pgvector • OpenAI GPT-4 Turbo • React • TypeScript
 
 ## Why Local-First?
 
